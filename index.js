@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const admin = require("firebase-admin");
 const { createClient } = require("@supabase/supabase-js");
@@ -5,10 +6,8 @@ const { createClient } = require("@supabase/supabase-js");
 const app = express();
 app.use(express.json());
 
-// 🔐 Decode base64 service account
-const serviceAccount = JSON.parse(
-  Buffer.from(process.env.SERVICE_ACCOUNT_KEY, "base64").toString("utf8")
-);
+// 🔐 Load service account JSON from FIREBASE_SERVICE_ACCOUNT env (single-line JSON)
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
