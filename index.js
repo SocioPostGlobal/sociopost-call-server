@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const admin = require("firebase-admin");
 const { createClient } = require("@supabase/supabase-js");
+const { AccessToken } = require("livekit-server-sdk");
 
 const app = express();
 app.use(express.json());
@@ -74,6 +75,42 @@ app.post("/send-call", async (req, res) => {
   } catch (err) {
     console.error("❌ FCM ERROR:", err);
     return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 🎟️ Generate LiveKit token (production-safe; no logging of secrets)
+app.post("/livekit/token", async (req, res) => {
+  try {
+    const { userId, roomName, role } = req.body;
+
+    if (!userId || !roomName) {
+      return res.status(400).json({ error: "userId and roomName required" });
+    }
+
+    if (!process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
+      return res.status(500).json({ error: "LiveKit env not configured" });
+    }
+
+    const at = new AccessToken(
+      process.env.LIVEKIT_API_KEY,
+      process.env.LIVEKIT_API_SECRET,
+      { identity: userId }
+    );
+
+    at.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: role !== "listener",
+      canSubscribe: true,
+      canPublishData: role !== "listener",
+    });
+
+    return res.json({
+      token: at.toJwt(),
+    });
+  } catch (err) {
+    console.error("❌ LiveKit token error:", err);
+    return res.status(500).json({ error: "token_generation_failed" });
   }
 });
 
